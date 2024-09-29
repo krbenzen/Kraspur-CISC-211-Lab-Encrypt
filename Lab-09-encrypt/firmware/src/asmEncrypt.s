@@ -11,15 +11,16 @@
     
 /*** STUDENTS: Change the next line to your name!  **/
 nameStr: .asciz "Inigo Montoya"  
+.align
  
 /* initialize a global variable that C can access to print the nameStr */
 .global nameStrPtr
 .type nameStrPtr,%gnu_unique_object
 nameStrPtr: .word nameStr   /* Assign the mem loc of nameStr to nameStrPtr */
 
- // Define the globals so that the C code can access them
+// Define the globals so that the C code can access them
 // (in this lab we return the pointer, so strictly speaking,
-// doesn't really need to be defined as global)
+// does not really need to be defined as global)
 // .global cipherText
 .type cipherText,%gnu_unique_object
 

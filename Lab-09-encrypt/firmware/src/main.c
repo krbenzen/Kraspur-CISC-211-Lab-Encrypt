@@ -53,7 +53,7 @@ extern uint32_t cipherTextPtr;
 #define PERIOD_4S                               4096
 
 // number of Lab Quiz points for 100% correct test results
-#define NUM_PTS_MAX 20
+#define NUM_PTS_MAX 40
 
 #define MAX_PRINT_LEN 900
 
@@ -296,10 +296,15 @@ int main ( void )
                 
                 // select the input text
                 char * inpText = inpTextArray[numString];
+
+                // TODO: Need to reset contents of cipherText buffer
+                // so that test can detect if the encryption function
+                // wrote more bytes than it was supposed to. This error
+                // is currently not detected. VB - 2024-09-28
                 
                 // encrypt it
                 asmEncryptedTextPtr = asmEncrypt(inpText,k);
-                
+                                
                 testResult(testCaseNum, inpText, asmEncryptedTextPtr, k,
                         &passCount, &failCount);
                 totalFailCount += failCount;
@@ -333,7 +338,7 @@ int main ( void )
         isRTCExpired = false;
         isUSARTTxComplete = false;
         snprintf((char*)uartTxBuffer, MAX_PRINT_LEN,
-                "========= %s: ALL TESTS COMPLETE!\r\n"
+                "========= %s: asmEncrypt ALL TESTS COMPLETE!\r\n"
                 "Post-test idle Count: %ld; "
                 "Total Passing Tests: %ld/%ld\r\n"
                 "Score: %ld/%d pts\r\n"
