@@ -41,6 +41,14 @@
 #include <malloc.h>
 #include "definitions.h"                // SYS function prototypes
 
+// NOTE: THIS .equ MUST MATCH THE #DEFINE IN main.c !!!!!
+// TODO: create a .h file that handles both C and assembly syntax for this definition
+#define CIPHER_TEXT_LEN 200
+// the following reset value may or may not print some funky value if
+// for some reason the code tries to print it (like missing NUL)
+#define CIPHER_TEXT_RESET_VALUE  0xFF  
+
+
 // Define the global that gives access to the student's name
 extern uint32_t nameStrPtr;
 extern uint32_t cipherTextPtr;
@@ -107,6 +115,37 @@ static void usartDmaChannelHandler(DMAC_TRANSFER_EVENT event, uintptr_t contextH
 #endif
 
 
+// before each call to student's code, fill the cipher text buffer with
+// a non-zero value. This allows the test code to detect out-of-bounds
+// writes made by the assembly code being tested. 
+static void resetCipherTextBuffer()
+{
+    char * textPtr = (char *) cipherTextPtr;
+    
+    for (uint32_t i = 0; i<CIPHER_TEXT_LEN; ++i)
+    {
+        *textPtr++ = (char) CIPHER_TEXT_RESET_VALUE;
+    }
+}
+
+
+// will return false if no out-of-bounds writes detected, 
+// true if an error was detected.
+bool testOutOfBoundsWrites( char * asmCipherTextPtr, 
+                            uint32_t expectedStringLen)
+{
+    // start checking right after the terminating null
+    char * textPtr = asmCipherTextPtr + expectedStringLen + 1;
+    for ( uint32_t i = expectedStringLen + 1; i < CIPHER_TEXT_LEN; ++i)
+    {
+        if (*textPtr++ != CIPHER_TEXT_RESET_VALUE)
+            return true;
+    }
+    return false;
+}
+
+
+
 // Stores pass/fail counts for this pass at the locations provided by
 // passCount and failCount
 // If both strlen and decrypted contents match: passCount = 2; failCount = 0;
@@ -124,18 +163,20 @@ static void testResult(int testNum,
     *failCount = *passCount = 0;
     char *s1 = pass;   // length and ptr are correct
     char *s2 = pass;   // encryption is correct
+    char *s3 = pass;   // no out-of-bound write errors in encrypted string buf
     uint32_t origLen = strlen(origText);
     uint32_t encryptedLen = strlen(asmCipherTextPtr);
     char *printableDecryptString = 0;
+    bool skipDecryption = false;
     
     // make sure ptr returned by asm call matches the location reserved for the encrypted text
     // if it doesn't, set fail count to 2 and don't compare student's decrypted text
     // to known-good value
     if ( (char *) asmCipherTextPtr != (char *) cipherTextPtr )
     {
-        *failCount += 2;
+        *failCount += 1;
         s1 = fail;
-        s2 = fail;
+        skipDecryption = true;
         printableDecryptString = "DECRYPTION NOT ATTEMPTED DUE TO POINTER COMPARISON FAIL";
     }
     // make sure length of encrypted string matches known-good encrypted text.
@@ -145,26 +186,32 @@ static void testResult(int testNum,
     {
         // since we can't compare unequal length strings,
         // we won't even try to decrypt. This counts as two failures
-        *failCount += 2;
+        *failCount += 1;
         s1 = fail;
-        s2 = fail;
+        skipDecryption = true;
         printableDecryptString = "DECRYPTION NOT ATTEMPTED DUE TO LENGTH MISMATCH";
     }
     else
     {
-        *passCount += 1;
+        *passCount += 1; // pointer comparison and string lengths were correct.
     }
             
     unsigned char * dPtr = decryptBuffer;
     char * encCharPtr = asmCipherTextPtr;
     
     // decrypt the encrypted string returned by student's code.
-    // only attempt to decrypt if ptr and strlen tests passed
-    if(*failCount == 0)
+    // Only attempt to decrypt if ptr and strlen tests passed
+    if(skipDecryption == true)
+    {
+        *failCount +=1;
+        s2 = fail;
+    }
+    else  // compare student's encrypted string to correctly encrypted string
     {
         // set printable buf to the decrypt buffer
         printableDecryptString = (char *) decryptBuffer;
         
+        // encrypt the string ourselves so we can compare to student's result
         char inpChar;
         // should really check key to make sure it's in range...
         // for(int i = 0; i < origLen; ++i)
@@ -190,6 +237,8 @@ static void testResult(int testNum,
             *dPtr++ = inpChar;
         }
         *dPtr = 0; // add trailing null
+        
+        // now compare the string we just encrypted to the student's string
         // Check to see that encrypted strings matched.
         if(strcmp((const char *) decryptBuffer,(const char *)origText) != 0)
         {
@@ -203,6 +252,18 @@ static void testResult(int testNum,
 
     }
     
+    bool outOfBoundsWriteDetected = false;
+    outOfBoundsWriteDetected = testOutOfBoundsWrites(asmCipherTextPtr, origLen);
+    
+    if(outOfBoundsWriteDetected == true)
+    {
+        *failCount += 1;
+        s3 = fail;
+    }
+    else
+    {
+        *passCount += 1;
+    }
        
     snprintf((char*)uartTxBuffer, MAX_PRINT_LEN,
             "========= Test Number: %d\r\n"
@@ -216,11 +277,14 @@ static void testResult(int testNum,
             "test results: \r\n"
             "  RETURNED POINTER AND LENGTH TEST: %s\r\n"
             "             DECRYPTED STRING TEST: %s\r\n"
+            "          OUT-OF-BOUNDS WRITE TEST: %s\r\n"
             "\r\n",
             testNum,key,
             origText,asmCipherTextPtr,printableDecryptString,
             origLen,encryptedLen,
-            s1, s2); 
+            s1, 
+            s2,
+            s3); 
 
 #if USING_HW 
     DMAC_ChannelTransfer(DMAC_CHANNEL_0, uartTxBuffer, \
@@ -281,7 +345,7 @@ int main ( void )
             // apply the selected key to each string
             for(int numString = 0; numString<numStrings; numString++)
             {
-                // Toggle the LED to sho we're running a new testcase
+                // Toggle the LED to show we're running a new testcase
                 LED0_Toggle();
                 
                 // reset the state variables
@@ -297,14 +361,15 @@ int main ( void )
                 // select the input text
                 char * inpText = inpTextArray[numString];
 
-                // TODO: Need to reset contents of cipherText buffer
+                // Need to reset contents of cipherText buffer
                 // so that test can detect if the encryption function
-                // wrote more bytes than it was supposed to. This error
-                // is currently not detected. VB - 2024-09-28
+                // wrote outside the mem range it was supposed to.
+                // (out-of-bounds write error)
+                resetCipherTextBuffer();
                 
                 // encrypt it
                 asmEncryptedTextPtr = asmEncrypt(inpText,k);
-                                
+                                                
                 testResult(testCaseNum, inpText, asmEncryptedTextPtr, k,
                         &passCount, &failCount);
                 totalFailCount += failCount;

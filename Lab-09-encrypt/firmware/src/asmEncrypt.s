@@ -25,8 +25,15 @@ nameStrPtr: .word nameStr   /* Assign the mem loc of nameStr to nameStrPtr */
 .type cipherText,%gnu_unique_object
 
 .align
-// space allocated for cipherText: 200 bytes, prefilled with 0x2A */
-cipherText: .space 200,0x2A  
+ 
+@ NOTE: THIS .equ MUST MATCH THE #DEFINE IN main.c !!!!!
+@ TODO: create a .h file that handles both C and assembly syntax for this definition
+.equ CIPHER_TEXT_LEN, 200
+ 
+// space allocated for cipherText: 200 bytes, prefilled with 0x2A
+cipherText: .space CIPHER_TEXT_LEN,0x2A  
+
+.align
  
 .global cipherTextPtr
 .type cipherTextPtr,%gnu_unique_object
@@ -80,6 +87,11 @@ asmEncrypt:
 
     // save the caller's registers, as required by the ARM calling convention
     push {r4-r11,LR}
+    
+    LDR r5,=cipherText
+    ADD r5,100
+    LDR r6,=0x2A
+    STR R6,[r5]
     
     /* YOUR asmEncrypt CODE BELOW THIS LINE! VVVVVVVVVVVVVVVVVVVVV  */
     
