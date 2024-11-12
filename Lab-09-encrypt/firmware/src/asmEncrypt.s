@@ -88,12 +88,10 @@ asmEncrypt:
     // save the caller's registers, as required by the ARM calling convention
     push {r4-r11,LR}
     
-    LDR r5,=cipherText
-    ADD r5,100
-    LDR r6,=0x2A
-    STR R6,[r5]
-    
     /* YOUR asmEncrypt CODE BELOW THIS LINE! VVVVVVVVVVVVVVVVVVVVV  */
+
+
+
     
     /* YOUR asmEncrypt CODE ABOVE THIS LINE! ^^^^^^^^^^^^^^^^^^^^^  */
 
