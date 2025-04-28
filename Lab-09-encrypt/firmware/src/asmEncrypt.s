@@ -2,7 +2,7 @@
 
 #include <xc.h>
 
-// Declare the following to be in data memory 
+/* Declare the following to be in data memory */
 .data  
 
 /* create a string */
@@ -18,10 +18,10 @@ nameStr: .asciz "Inigo Montoya"
 .type nameStrPtr,%gnu_unique_object
 nameStrPtr: .word nameStr   /* Assign the mem loc of nameStr to nameStrPtr */
 
-// Define the globals so that the C code can access them
-// (in this lab we return the pointer, so strictly speaking,
-// does not really need to be defined as global)
-// .global cipherText
+/* Define the globals so that the C code can access them */
+/* (in this lab we return the pointer, so strictly speaking, */
+/* does not really need to be defined as global) */
+/* .global cipherText */
 .type cipherText,%gnu_unique_object
 
 .align
@@ -30,7 +30,7 @@ nameStrPtr: .word nameStr   /* Assign the mem loc of nameStr to nameStrPtr */
 @ TODO: create a .h file that handles both C and assembly syntax for this definition
 .equ CIPHER_TEXT_LEN, 200
  
-// space allocated for cipherText: 200 bytes, prefilled with 0x2A
+/* space allocated for cipherText: 200 bytes, prefilled with 0x2A */
 cipherText: .space CIPHER_TEXT_LEN,0x2A  
 
 .align
@@ -39,11 +39,11 @@ cipherText: .space CIPHER_TEXT_LEN,0x2A
 .type cipherTextPtr,%gnu_unique_object
 cipherTextPtr: .word cipherText
 
-// Tell the assembler that what follows is in instruction memory    
+/* Tell the assembler that what follows is in instruction memory     */
 .text
 .align
 
-// Tell the assembler to allow both 16b and 32b extended Thumb instructions
+/* Tell the assembler to allow both 16b and 32b extended Thumb instructions */
 .syntax unified
 
     
@@ -85,7 +85,7 @@ where:
 .type asmEncrypt,%function
 asmEncrypt:   
 
-    // save the caller's registers, as required by the ARM calling convention
+    /* save the caller's registers, as required by the ARM calling convention */
     push {r4-r11,LR}
     
     /* YOUR asmEncrypt CODE BELOW THIS LINE! VVVVVVVVVVVVVVVVVVVVV  */
@@ -95,7 +95,7 @@ asmEncrypt:
     
     /* YOUR asmEncrypt CODE ABOVE THIS LINE! ^^^^^^^^^^^^^^^^^^^^^  */
 
-    // restore the caller's registers, as required by the ARM calling convention
+    /* restore the caller's registers, as required by the ARM calling convention */
     pop {r4-r11,LR}
 
     mov pc, lr	 /* asmEncrypt return to caller */
