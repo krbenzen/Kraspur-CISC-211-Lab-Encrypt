@@ -10,7 +10,7 @@
 .type nameStr,%gnu_unique_object
     
 /*** STUDENTS: Change the next line to your name!  **/
-nameStr: .asciz "Inigo Montoya"  
+nameStr: .asciz "Benzen Raspur"  
 .align
  
 /* initialize a global variable that C can access to print the nameStr */
@@ -90,6 +90,54 @@ asmEncrypt:
     
     /* YOUR asmEncrypt CODE BELOW THIS LINE! VVVVVVVVVVVVVVVVVVVVV  */
 
+    /*r0 = ptrToInputText r1 = key (from 0 to 25 abc)*/
+    LDR   r2, =cipherText   /*r2 output buffer*/
+    MOV   r5, r2            /*r5 holds base addr and to return later*/
+
+    /*MAIN LOOP*/
+loop_start:
+    LDRB  r3, [r0], #1      /*r3 increment r0*/
+    CMP   r3, #0            /*NULL*/
+    BEQ   finish
+    /*Uppercase A to Z*/
+    CMP   r3, #'A'
+    BLT   check_lower
+    CMP   r3, #'Z'
+    BGT   check_lower
+    SUB   r4, r3, #'A'      /*r4 = index 0 to 25*/
+    ADD   r4, r4, r1        /*shift*/
+    CMP   r4, #26           /*wrap if GREATER or EQUAL to 26*/
+    BLT   upper_done
+    SUB   r4, r4, #26
+upper_done:
+    ADD   r3, r4, #'A'      /*back to ascii*/
+    B     store_cha
+
+/*Lowercase A to Z*/
+check_lower:
+    CMP   r3, #'a'
+    BLT   store_char        /*not alpha, copy*/
+    CMP    r3, #'z'
+    BGT   store_char        /*not alpha, copy*/
+    SUB   r4, r3, #'a'
+    ADD   r4, r4, r1
+    CMP   r4, #26
+    BLT   lower_done
+    SUB   r4, r4, #26
+lower_done:
+    ADD   r3, r4, #'a'
+/*Store the byte*/
+    
+store_char:
+    STRB  r3, [r2], 1      /*cipherText = r3 */
+    B     loop_start
+    
+/*Null and Return*/
+finish:
+    MOVS   r3, #0            /*Null*/
+    STRB  r3, [r2]          /*store at end cipherText*/
+
+    MOV    r0, r5            /*return to cipherText*/
 
 
     
